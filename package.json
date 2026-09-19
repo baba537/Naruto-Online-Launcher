@@ -1,0 +1,112 @@
+{
+  "name": "naruto-online-launcher",
+  "productName": "Naruto Online Launcher",
+  "version": "1.0.0",
+  "description": "Desktop launcher for Naruto Online with the Flash plugin, tabs for several accounts, encrypted sign-in and performance settings, for Windows and Linux",
+  "main": "src/main.js",
+  "homepage": "https://github.com/baba537/Naruto-Online-Launcher",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/baba537/Naruto-Online-Launcher.git"
+  },
+  "bugs": {
+    "url": "https://github.com/baba537/Naruto-Online-Launcher/issues"
+  },
+  "author": {
+    "name": "baba537",
+    "email": "baba537@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=16 <19"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "check": "node scripts/check.js",
+    "build:win": "electron-builder --win --publish never",
+    "build:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "11.5.0",
+    "electron-builder": "22.14.13"
+  },
+  "build": {
+    "appId": "io.github.baba537.narutoonlinelauncher",
+    "productName": "Naruto Online Launcher",
+    "copyright": "Copyright © 2026 baba537",
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "files": [
+      "src/**/*",
+      "resources/icon.png",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "resources/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "resources/flash/pepflashplayer.dll",
+          "to": "flash/pepflashplayer.dll"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Naruto Online Launcher",
+      "artifactName": "Naruto-Online-Launcher-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Naruto-Online-Launcher-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "icon": "resources/icon.png",
+      "category": "Game",
+      "synopsis": "Launcher for Naruto Online (PPAPI Flash)",
+      "maintainer": "baba537 <baba537@users.noreply.github.com>",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Naruto-Online-Launcher-${version}-${arch}.${ext}",
+      "extraResources": [
+        {
+          "from": "resources/flash/libpepflashplayer.so",
+          "to": "flash/libpepflashplayer.so"
+        }
+      ]
+    }
+  }
+}

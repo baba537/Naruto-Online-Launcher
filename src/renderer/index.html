@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Naruto Online Launcher</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../../resources/icon.png" alt="" class="brand-icon" />
+      <div>
+        <div class="brand-title">Naruto Online Launcher</div>
+        <div class="brand-sub" id="version"></div>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="accounts" role="tab" data-i18n="tab.accounts"></button>
+      <button class="tab" data-tab="settings" role="tab" data-i18n="tab.settings"></button>
+      <button class="tab" data-tab="system" role="tab" data-i18n="tab.system"></button>
+    </nav>
+    <div class="chips">
+      <span class="chip" id="chip-flash"></span>
+      <span class="chip" id="chip-vault"></span>
+      <span class="chip" id="chip-ram"></span>
+    </div>
+  </header>
+
+  <div id="banner" class="banner hidden" role="status">
+    <span id="banner-text"></span>
+    <span class="banner-actions">
+      <button id="banner-action" class="btn small hidden" type="button"></button>
+      <button id="banner-close" class="btn small ghost" type="button" aria-label="Close">✕</button>
+    </span>
+  </div>
+
+  <main>
+    <section id="tab-accounts" class="tab-panel">
+      <div id="unlock-box" class="card unlock hidden">
+        <h2 data-i18n="unlock.title"></h2>
+        <p class="muted" data-i18n="unlock.text"></p>
+        <form id="unlock-form" class="row">
+          <input id="unlock-password" type="password" data-i18n-placeholder="unlock.placeholder" autocomplete="current-password" required />
+          <button class="btn primary" type="submit" data-i18n="unlock.button"></button>
+        </form>
+      </div>
+
+      <div class="section-head">
+        <h2 data-i18n="accounts.title"></h2>
+        <div class="row">
+          <button id="start-all" class="btn hidden" type="button" data-i18n="accounts.startAll"></button>
+          <button id="add-account" class="btn primary" type="button" data-i18n="accounts.add"></button>
+        </div>
+      </div>
+      <p class="muted small" data-i18n="accounts.hint"></p>
+      <div id="account-list" class="account-grid"></div>
+      <div id="account-empty" class="empty hidden">
+        <p data-i18n="accounts.empty"></p>
+        <p class="muted small" data-i18n="accounts.emptyHint"></p>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab-panel hidden">
+      <div class="card">
+        <h2 data-i18n="settings.general"></h2>
+        <div class="field-grid">
+          <div>
+            <label for="language" data-i18n="settings.language"></label>
+            <select id="language" data-setting-select="language">
+              <option value="auto" data-i18n="lang.auto"></option>
+              <option value="en" data-i18n="lang.en"></option>
+              <option value="de" data-i18n="lang.de"></option>
+            </select>
+          </div>
+          <div>
+            <label for="ui-scale" data-i18n="settings.uiScale"></label>
+            <select id="ui-scale" data-setting-select="uiScale">
+              <option value="0.8">80 %</option>
+              <option value="0.9">90 %</option>
+              <option value="1">100 %</option>
+              <option value="1.1">110 %</option>
+              <option value="1.25">125 %</option>
+              <option value="1.5">150 %</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-grid">
+          <div>
+            <label for="zoom-mode" data-i18n="settings.zoomMode"></label>
+            <select id="zoom-mode" data-setting-select="zoomRender">
+              <option value="smooth" data-i18n="zoom.smooth"></option>
+              <option value="sharp" data-i18n="zoom.sharp"></option>
+            </select>
+          </div>
+        </div>
+        <p class="muted small" data-i18n="settings.zoomHint"></p>
+        <label class="toggle"><input type="checkbox" data-setting="tabbedWindows" /> <span data-i18n="settings.tabbed"></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="muteInactiveTabs" /> <span data-i18n="settings.muteInactive"></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="minimizeOnStart" /> <span data-i18n="settings.minimizeOnStart"></span></label>
+        <p class="muted small" data-i18n="settings.shortcuts"></p>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.performance"></h2>
+        <div id="preset-list" class="preset-list"></div>
+        <p class="muted small" id="preset-active"></p>
+        <div class="field-grid">
+          <div>
+            <label for="flash-quality" data-i18n="settings.flashQuality"></label>
+            <select id="flash-quality" data-setting-select="flashQuality">
+              <option value="preset" data-i18n="opt.preset"></option>
+              <option value="default" data-i18n="opt.gameDefault"></option>
+              <option value="low" data-i18n="quality.low"></option>
+              <option value="medium" data-i18n="quality.medium"></option>
+              <option value="high" data-i18n="quality.high"></option>
+              <option value="best" data-i18n="quality.best"></option>
+            </select>
+          </div>
+        </div>
+        <p class="muted small" data-i18n="settings.flashHint"></p>
+        <label class="toggle"><input type="checkbox" data-setting="assetCache" /> <span data-i18n="settings.assetCache"></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="autoRecover" /> <span data-i18n="settings.autoRecover"></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="cpuOptimization" /> <span data-i18n="settings.cpu"></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="manageMmsCfg" /> <span data-i18n="settings.mms"></span></label>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.security"></h2>
+        <label class="toggle"><input type="checkbox" data-setting="autoLogin" /> <span data-i18n="settings.autoLogin"></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="blockTrackers" /> <span data-i18n="settings.trackers"></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="strictNetwork" /> <span><span data-i18n="settings.strict"></span> <em class="muted" data-i18n="settings.strictNote"></em></span></label>
+        <label class="toggle"><input type="checkbox" data-setting="debugLog" /> <span data-i18n="settings.debugLog"></span></label>
+        <div class="row gap-top">
+          <button class="btn" id="settings-reset" type="button" data-i18n="settings.reset"></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="settings.master"></h2>
+        <p class="muted" id="vault-description"></p>
+        <form id="master-form" class="row">
+          <input id="master-new" type="password" autocomplete="new-password" />
+          <input id="master-confirm" type="password" autocomplete="new-password" data-i18n-placeholder="master.confirm" />
+          <button class="btn primary" type="submit" id="master-submit"></button>
+        </form>
+        <div class="row gap-top">
+          <button class="btn" id="vault-lock" type="button" data-i18n="vault.lockNow"></button>
+          <button class="btn" id="master-remove" type="button" data-i18n="master.remove"></button>
+          <button class="btn danger" id="vault-reset" type="button" data-i18n="vault.reset"></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-system" class="tab-panel hidden">
+      <div class="card">
+        <h2 data-i18n="system.flash"></h2>
+        <p id="flash-status"></p>
+        <div class="row">
+          <button class="btn" id="flash-import" type="button" data-i18n="flash.import"></button>
+          <button class="btn" id="flash-folder" type="button" data-i18n="flash.openFolder"></button>
+        </div>
+        <details class="gap-top">
+          <summary class="muted small" data-i18n="flash.searched"></summary>
+          <ul id="flash-searched" class="mono small"></ul>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="system.hardware"></h2>
+        <dl class="kv" id="hardware"></dl>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="system.resources"></h2>
+        <dl class="kv" id="resources"></dl>
+        <p class="muted small gap-top" data-i18n="res.ramNote"></p>
+        <div class="row gap-top">
+          <button class="btn" id="open-logs" type="button" data-i18n="res.openLogs"></button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="account-dialog">
+    <form id="account-form" method="dialog">
+      <h2 id="account-dialog-title"></h2>
+      <input type="hidden" id="acc-id" />
+      <label for="acc-label" data-i18n="dialog.name"></label>
+      <input id="acc-label" maxlength="40" data-i18n-placeholder="dialog.namePh" required />
+      <div class="two-col">
+        <div>
+          <label for="acc-region" data-i18n="dialog.region"></label>
+          <select id="acc-region"></select>
+        </div>
+        <div>
+          <label for="acc-server" data-i18n="dialog.server"></label>
+          <input id="acc-server" maxlength="6" data-i18n-placeholder="dialog.serverPh" />
+        </div>
+      </div>
+      <fieldset>
+        <legend data-i18n="dialog.credentials"></legend>
+        <label for="acc-username" data-i18n="dialog.username"></label>
+        <input id="acc-username" maxlength="254" autocomplete="off" />
+        <label for="acc-password" data-i18n="dialog.password"></label>
+        <input id="acc-password" type="password" maxlength="1024" autocomplete="new-password" />
+        <p class="muted small" id="acc-cred-hint"></p>
+        <label class="toggle hidden" id="acc-clear-wrap"><input type="checkbox" id="acc-clear" /> <span data-i18n="dialog.clearCreds"></span></label>
+      </fieldset>
+      <p id="account-error" class="error"></p>
+      <div class="row end">
+        <button class="btn ghost" type="button" id="account-cancel" data-i18n="dialog.cancel"></button>
+        <button class="btn primary" type="submit" data-i18n="dialog.save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="../shared/i18n.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

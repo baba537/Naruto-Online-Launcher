@@ -1,0 +1,19 @@
+# dependencies and build output
+node_modules/
+dist/
+out/
+
+# runtime data, logs, local config
+*.log
+logs/
+.env
+.env.*
+vault.json
+settings.json
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

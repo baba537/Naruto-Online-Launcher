@@ -1,0 +1,30 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+body { font: 13px "Segoe UI", system-ui, -apple-system, "Noto Sans", Ubuntu, sans-serif; color: #d9d6cf; user-select: none; }
+
+#strip {
+  height: 36px; display: flex; align-items: stretch; gap: 2px; padding: 4px 6px 0;
+  background: #14141a; border-bottom: 1px solid #262630;
+}
+.icon-btn { background: none; border: 0; padding: 0 6px; cursor: pointer; border-radius: 6px; }
+.icon-btn:hover { background: #22222c; }
+.icon-btn img { width: 20px; height: 20px; display: block; }
+
+#tabs { display: flex; gap: 2px; min-width: 0; flex: 1; overflow: hidden; }
+.tab {
+  display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 220px; flex: 0 1 220px;
+  padding: 0 6px 0 10px; border-radius: 7px 7px 0 0; background: #1b1b22; cursor: pointer; color: #9c99a4;
+}
+.tab:hover { background: #22222b; color: #d9d6cf; }
+.tab.active { background: #2a2a34; color: #f1eee8; box-shadow: inset 0 2px 0 #ff8c00; }
+.label { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #55525c; flex: none; }
+.dot.ok { background: #3fbf7f; }
+.dot.pending { background: #e6b84a; }
+.dot.failed { background: #e5534b; }
+.tab button {
+  background: none; border: 0; color: inherit; cursor: pointer; width: 22px; height: 22px;
+  border-radius: 5px; display: grid; place-items: center; padding: 0; opacity: .7;
+}
+.tab button:hover { background: #3a3a46; opacity: 1; }
+.tab button svg { width: 14px; height: 14px; fill: currentColor; }
