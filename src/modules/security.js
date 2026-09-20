@@ -12,7 +12,6 @@
 // checkout runs over payment providers that cannot be listed in advance.
 
 const net = require('net');
-const { shell } = require('electron');
 const log = require('./logger').create('security');
 const { GAME_DOMAINS, AUTH_POPUP_DOMAINS, NEVER_BLOCK_HOSTS, RESOURCE_DOMAINS, hostMatches } = require('../config/urls');
 
@@ -165,7 +164,8 @@ function openExternalSafe(url) {
   const parsed = parseUrl(url);
   if (parsed && /^https?:$/.test(parsed.protocol)) {
     log.info(`opening in browser: ${parsed.origin}${parsed.pathname}`);
-    shell.openExternal(parsed.href);
+    // required here so the module can be loaded without Electron (checks)
+    require('electron').shell.openExternal(parsed.href);
   } else {
     log.warn(`external link dropped: ${String(url).slice(0, 100)}`);
   }

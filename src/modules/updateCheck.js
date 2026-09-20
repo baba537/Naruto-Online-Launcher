@@ -7,7 +7,6 @@
 // The request uses its own in-memory session: the launcher window blocks all
 // network traffic, and nothing of this check should end up in a game session.
 
-const { net, session } = require('electron');
 const log = require('./logger').create('update');
 
 const REPO = 'baba537/Naruto-Online-Launcher';
@@ -36,6 +35,8 @@ function isNewer(a, b) {
 }
 
 function fetchLatestTag() {
+  // required here so the module can be loaded without Electron (checks)
+  const { net, session } = require('electron');
   return new Promise((resolve, reject) => {
     const request = net.request({
       method: 'GET',
