@@ -81,18 +81,73 @@ function jsFiles(dir) {
     assert.strictEqual(optimization.resolveFlashQuality(preset, { flashQuality: 'preset' }), 'low');
     assert.strictEqual(optimization.resolveFlashQuality(preset, { flashQuality: 'best' }), 'best');
   });
-  await test('settings reset keeps language and window size', () => {
+  await test('settings reset keeps language and window geometry', () => {
     const { Settings } = require('../src/modules/settings');
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nol-settings-'));
     const s = new Settings(dir);
-    s.update({ language: 'de', gameWidth: 1600, preset: 'low-spec', strictNetwork: false });
+    s.update({ language: 'de', gameWidth: 1600, gameX: -20, winY: 120, preset: 'low-spec', strictNetwork: false });
     s.reset();
     const again = new Settings(dir);
     assert.strictEqual(again.get('language'), 'de');
     assert.strictEqual(again.get('gameWidth'), 1600);
+    assert.strictEqual(again.get('gameX'), -20);
+    assert.strictEqual(again.get('winY'), 120);
     assert.strictEqual(again.get('preset'), 'auto');
     assert.strictEqual(again.get('strictNetwork'), true);
     fs.rmdirSync(dir, { recursive: true });
+  });
+  await test('only the preset needs a restart', () => {
+    const { RESTART_KEYS } = require('../src/modules/settings');
+    assert.deepStrictEqual(RESTART_KEYS, ['preset']);
+  });
+  await test('window position is only reused when it is on a display', () => {
+    const { Settings } = require('../src/modules/settings');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nol-settings-'));
+    const s = new Settings(dir);
+    assert.strictEqual(s.get('gameX'), null);
+    assert.throws(() => s.update({ gameX: 1.5 }));
+    assert.throws(() => s.update({ gameY: 99999 }));
+    s.update({ gameX: 0, gameY: 0 });
+    fs.rmdirSync(dir, { recursive: true });
+  });
+
+  const updateCheck = require('../src/modules/updateCheck');
+  await test('update check compares versions', () => {
+    assert.ok(updateCheck.isNewer('v1.2.0', '1.1.9'));
+    assert.ok(updateCheck.isNewer('1.1.1', '1.1'));
+    assert.ok(!updateCheck.isNewer('v1.1.0', '1.1.0'));
+    assert.ok(!updateCheck.isNewer('v1.0.9', '1.1.0'));
+  });
+
+  await test('payment hosts stay reachable in strict mode', () => {
+    const { RESOURCE_DOMAINS, hostMatches } = require('../src/config/urls');
+    for (const host of ['pay.oasispay.org', 'api.oasispay.org', 'res.oasispay.org', 'oasimage-bucket.s3.amazonaws.com', 'cdn.bootcss.com']) {
+      assert.ok(hostMatches(host, RESOURCE_DOMAINS), host);
+    }
+    assert.ok(!hostMatches('example.com', RESOURCE_DOMAINS));
+  });
+
+  await test('strict mode blocks unknown hosts, browsing views are exempt', () => {
+    const security = require('../src/modules/security');
+    let listener = null;
+    const ses = {
+      webRequest: { onBeforeRequest: (_filter, cb) => { listener = cb; } },
+      setPermissionRequestHandler() {},
+      setPermissionCheckHandler() {},
+      on() {}
+    };
+    security.hardenGameSession(ses, () => ({ blockTrackers: true, strictNetwork: true }));
+    const ask = (url, webContentsId) => {
+      let out = null;
+      listener({ url, resourceType: 'script', webContentsId }, (r) => { out = r; });
+      return out;
+    };
+    assert.strictEqual(ask('https://checkout.example.com/pay.js', 7).cancel, true);
+    assert.strictEqual(ask('https://pay.oasispay.org/pay.js', 7).cancel, false);
+    security.setBrowsing({ id: 7, once() {} });
+    assert.strictEqual(ask('https://checkout.example.com/pay.js', 7).cancel, false, 'browsing view may reach a payment provider');
+    assert.strictEqual(ask('https://checkout.example.com/pay.js', 8).cancel, true, 'other views stay strict');
+    assert.strictEqual(ask('https://www.google-analytics.com/collect', 7).cancel, true, 'trackers stay blocked');
   });
 
   const { parseCpuList } = require('../src/modules/cpuOptimizer');

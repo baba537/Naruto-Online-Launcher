@@ -54,6 +54,8 @@
     'banner.cacheCleared': 'Cache of "{name}" cleared.',
     'banner.loggedOut': '"{name}" signed out.',
     'banner.restart': '{reason} This takes effect after a restart.',
+    'banner.update': 'Version {version} is available.',
+    'banner.updateOpen': 'Open download page',
     'banner.restartNow': 'Restart now',
     'banner.settingSaved': 'Setting saved.',
     'banner.flashImported': 'Flash plugin imported.',
@@ -79,6 +81,7 @@
     'zoom.sharp': 'Sharp (real zoom)',
     'settings.zoomHint': 'Sharp: the game is drawn again at the larger size. With Flash it zooms in 20 % steps, other steps can show thin lines on the map. Smooth: the finished picture is scaled up with filtering; softer, no lines.',
     'settings.shortcuts': 'Game window: F11 fullscreen · Ctrl + / − / 0 zoom (saved per account) · Ctrl+Tab next tab · Ctrl+M mute · F9 screenshot · F5 reload',
+    'settings.popupsInTabs': 'Open pages of the game (top-up, website) as a tab instead of a window',
     'settings.minimizeOnStart': 'Minimize the launcher when a game starts',
     'settings.reset': 'Restore default settings',
     'confirm.resetSettings': 'Restore all settings to their defaults? Language and window size are kept.',
@@ -116,6 +119,7 @@
     'settings.autoLogin': 'Sign in automatically with saved logins',
     'settings.strict': 'Strict network mode: only known game domains',
     'settings.strictNote': '(if something does not load, turn it off)',
+    'settings.checkUpdates': 'Check for a new version on GitHub at startup',
     'settings.debugLog': 'Detailed log (debug)',
 
     'settings.master': 'Master password',
@@ -232,7 +236,8 @@
     'tabs.mute': 'Mute (Ctrl+M)',
     'tabs.unmute': 'Unmute (Ctrl+M)',
     'tabs.close': 'Close',
-    'tabs.launcher': 'Open launcher'
+    'tabs.launcher': 'Open launcher',
+    'tabs.page': 'Page'
   };
 
   const de = {
@@ -284,6 +289,8 @@
     'banner.cacheCleared': 'Cache von „{name}“ geleert.',
     'banner.loggedOut': '„{name}“ abgemeldet.',
     'banner.restart': '{reason} Das greift nach einem Neustart.',
+    'banner.update': 'Version {version} ist verfügbar.',
+    'banner.updateOpen': 'Download-Seite öffnen',
     'banner.restartNow': 'Jetzt neu starten',
     'banner.settingSaved': 'Einstellung gespeichert.',
     'banner.flashImported': 'Flash-Plugin importiert.',
@@ -307,6 +314,7 @@
     'zoom.sharp': 'Scharf (echter Zoom)',
     'settings.zoomHint': 'Scharf: Das Spiel wird in der größeren Größe neu gezeichnet. Mit Flash wird in 20-%-Schritten gezoomt, bei anderen Stufen können feine Linien auf der Karte erscheinen. Weich: Das fertige Bild wird gefiltert hochskaliert; weicher, ohne Linien.',
     'settings.shortcuts': 'Spielfenster: F11 Vollbild · Strg + / − / 0 Zoom (pro Account gespeichert) · Strg+Tab nächster Tab · Strg+M stumm · F9 Screenshot · F5 neu laden',
+    'settings.popupsInTabs': 'Seiten des Spiels (Aufladen, Webseite) als Tab statt als Fenster öffnen',
     'settings.minimizeOnStart': 'Launcher beim Spielstart minimieren',
     'settings.reset': 'Standardeinstellungen wiederherstellen',
     'confirm.resetSettings': 'Alle Einstellungen auf Standard zurücksetzen? Sprache und Fenstergröße bleiben erhalten.',
@@ -344,6 +352,7 @@
     'settings.autoLogin': 'Mit gespeicherten Logins automatisch anmelden',
     'settings.strict': 'Strikter Netzwerkmodus: nur bekannte Spiel-Domains',
     'settings.strictNote': '(wenn etwas nicht lädt, wieder ausschalten)',
+    'settings.checkUpdates': 'Beim Start auf GitHub nach einer neuen Version suchen',
     'settings.debugLog': 'Ausführliches Log (Debug)',
 
     'settings.master': 'Master-Passwort',
@@ -453,7 +462,8 @@
     'tabs.mute': 'Stumm schalten (Strg+M)',
     'tabs.unmute': 'Ton an (Strg+M)',
     'tabs.close': 'Schließen',
-    'tabs.launcher': 'Launcher öffnen'
+    'tabs.launcher': 'Launcher öffnen',
+    'tabs.page': 'Seite'
   };
 
   const dictionaries = { en, de };

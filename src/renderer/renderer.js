@@ -65,6 +65,13 @@
     });
   }
 
+  // Only a few settings need a restart. After every other change the request
+  // disappears again, otherwise it would look as if it applied to all of them.
+  function restartHint(res, reason) {
+    if (res.restartRequired) askRestart(reason);
+    else hideBanner();
+  }
+
   async function run(button, task) {
     if (button) button.disabled = true;
     try {
@@ -306,7 +313,7 @@
     state.language = res.language;
     if (languageChanged) renderAll();
     else renderSettings();
-    if (res.restartRequired) askRestart(t('banner.settingSaved'));
+    restartHint(res, t('banner.settingSaved'));
     return res;
   }
 
@@ -361,6 +368,7 @@
     renderAll();
     if (res.restartRequired) askRestart(t('banner.settingsReset'));
     else showBanner(t('banner.settingsReset'));
+
   });
   $('account-cancel').addEventListener('click', () => dialog.close());
 
@@ -451,6 +459,12 @@
   api.onEvent('loginFailed', (p) => state && showBanner(t('banner.loginFailed', { name: p.name }), { error: true }));
   api.onEvent('crashRecovered', (p) => state && showBanner(t('banner.crashRecovered', { name: p.name })));
   api.onEvent('screenshot', (p) => state && showBanner(t('banner.screenshot', { file: p.file })));
+  api.onEvent('updateAvailable', (p) =>
+    showBanner(t('banner.update', { version: p.version }), {
+      sticky: true,
+      action: { label: t('banner.updateOpen'), run: () => api.openReleases() }
+    })
+  );
 
   refresh().catch((err) => showBanner(errorText(err), { error: true, sticky: true }));
 })();

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 (2026-09-20)
+
+- Pages the game opens itself (top-up, official website, support) open as a tab in the game window instead of a separate window; can be switched off
+- Top-up pages work again: they are no longer cut off by the strict network mode, and payment providers may be reached
+- Position and size of the launcher window and of the game window are remembered
+- A login is written to disk right away, so it survives closing the launcher or restarting the machine
+- A restart is only requested for the setting that needs one (the performance preset); the detailed log now takes effect immediately
+- Optional version check on GitHub at startup, with a note in the launcher
+
 ## 1.0.0 (2026-09-19)
 
 First public release.

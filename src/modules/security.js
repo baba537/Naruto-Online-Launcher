@@ -6,6 +6,10 @@
 //   - unknown hosts are logged once, which keeps the lists maintainable
 //   - permissions: fullscreen only; no downloads
 //   - navigation limited to game and sign-in domains, everything else opens in the browser
+//
+// Pages the game opens itself (top-up, website, support) are marked as browsing
+// views: they keep the tracker blocker but not the strict allowlist, because a
+// checkout runs over payment providers that cannot be listed in advance.
 
 const net = require('net');
 const { shell } = require('electron');
@@ -73,6 +77,19 @@ function isAllowedInStrictMode(parsed) {
 
 const hardened = new WeakSet();
 const seenUnknownHosts = new Set();
+// webContents ids of browsing views, see setBrowsing()
+const browsing = new Set();
+
+/** Marks a view as a browsing view (top-up, website): no strict allowlist, free navigation. */
+function setBrowsing(contents) {
+  const id = contents.id;
+  browsing.add(id);
+  contents.once('destroyed', () => browsing.delete(id));
+}
+
+function isBrowsing(webContentsId) {
+  return typeof webContentsId === 'number' && browsing.has(webContentsId);
+}
 
 /**
  * @param {Electron.Session} ses
@@ -112,7 +129,7 @@ function hardenGameSession(ses, getOptions) {
       seenUnknownHosts.add(host);
       log.info(`unknown host: ${host} (${details.resourceType})`);
     }
-    if (opts.strictNetwork && !isAllowedInStrictMode(parsed)) {
+    if (opts.strictNetwork && !isAllowedInStrictMode(parsed) && !isBrowsing(details.webContentsId)) {
       log.warn(`strict mode blocked ${host}`);
       return callback({ cancel: true });
     }
@@ -154,10 +171,18 @@ function openExternalSafe(url) {
   }
 }
 
-/** Keeps a game view or sign-in popup on game and sign-in domains. */
-function guardNavigation(contents) {
+/**
+ * Keeps a game view or sign-in popup on game and sign-in domains.
+ * A browsing view may follow https links anywhere; it only renders web pages,
+ * without Node, plugins of its own or downloads.
+ */
+function guardNavigation(contents, { browse = false } = {}) {
   const onNavigate = (event, url) => {
     if (isGameUrl(url) || isAuthPopupUrl(url)) return;
+    if (browse && parseUrl(url) && parseUrl(url).protocol === 'https:') {
+      log.info(`browsing view opens ${parseUrl(url).host}`);
+      return;
+    }
     event.preventDefault();
     log.warn(`navigation blocked: ${String(url).slice(0, 120)}`);
     openExternalSafe(url);
@@ -173,6 +198,7 @@ module.exports = {
   TRACKER_DOMAINS,
   hardenGameSession,
   guardNavigation,
+  setBrowsing,
   isGameUrl,
   isAuthPopupUrl,
   openExternalSafe,

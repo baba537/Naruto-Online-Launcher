@@ -10,6 +10,7 @@
 const path = require('path');
 const { BrowserWindow, dialog } = require('electron');
 const log = require('./logger').create('host');
+const windowBounds = require('./windowBounds');
 
 const STRIP_HEIGHT = 36;
 
@@ -17,24 +18,28 @@ class GameHost {
   /**
    * @param {object} opts
    * @param {boolean} opts.tabbed show the tab strip and accept more tabs
-   * @param {{width: number, height: number}} opts.size
+   * @param {{width: number, height: number, x: ?number, y: ?number}} opts.bounds
+   *        size and position of the game area, without the tab strip
    * @param {(key: string, params?: object) => string} opts.t translation
    * @param {(host: GameHost) => void} opts.onClosed
    * @param {() => void} opts.onShowLauncher
-   * @param {(width: number, height: number) => void} opts.onResize
+   * @param {(bounds: {x: number, y: number, width: number, height: number}) => void} opts.onBounds
    * @param {boolean} opts.isDev
    */
   constructor(opts) {
     this.opts = opts;
     this.tabbed = opts.tabbed;
-    this.tabs = []; // GameSession objects, see sessionManager.js
+    this.tabs = []; // GameSession and PopupTab objects, see sessionManager.js
     this.active = null;
     this.closing = false;
     this.stripReady = false; // set once tabs.js has registered its listener
 
+    const width = opts.bounds.width;
+    const height = opts.bounds.height + (this.tabbed ? STRIP_HEIGHT : 0);
     this.win = new BrowserWindow({
-      width: opts.size.width,
-      height: opts.size.height + (this.tabbed ? STRIP_HEIGHT : 0),
+      width,
+      height,
+      ...windowBounds.position(opts.bounds, width, height),
       useContentSize: true,
       minWidth: 800,
       minHeight: 550,
@@ -64,13 +69,9 @@ class GameHost {
     this.win.on('maximize', () => opts.onMaximizedChange(true));
     this.win.on('unmaximize', () => opts.onMaximizedChange(false));
 
-    this.win.on('resize', () => {
-      this.layout();
-      if (!this.win.isMaximized() && !this.win.isFullScreen()) {
-        const [w, h] = this.win.getContentSize();
-        opts.onResize(w, h - this.stripHeight());
-      }
-    });
+    this.win.on('resize', () => this.layout());
+    // position and size are remembered; the strip does not belong to the game area
+    windowBounds.track(this.win, (b) => opts.onBounds({ ...b, height: b.height - this.stripHeight() }));
     this.win.on('enter-full-screen', () => this.layout());
     this.win.on('leave-full-screen', () => this.layout());
     this.win.on('close', (event) => this._onClose(event));

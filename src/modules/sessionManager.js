@@ -3,6 +3,10 @@
 // Game sessions: one isolated partition (persist:account_<id>) per account with
 // its own cookies, cache and login. Sessions live as views inside GameHost
 // windows, either as tabs of one window or one window each.
+//
+// Pages the game opens itself (top-up, website, support) become PopupTabs in
+// the same window. Only third-party sign-in keeps its own window, because it
+// needs window.opener and window.close.
 
 const fs = require('fs');
 const path = require('path');
@@ -23,6 +27,11 @@ const CRASH_WINDOW_MS = 10 * 60 * 1000;
 const MAX_RECOVERIES = 3;
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
+// Sign-in popups keep the size the page asks for; pages of the game get at
+// least this much, otherwise the site switches to its mobile layout.
+const POPUP_MIN_WIDTH = 1024;
+const POPUP_MIN_HEIGHT = 720;
+const TAB_LABEL_MAX = 28;
 // Server pages of the game. The site opens them with window.open; inside the
 // launcher they replace the server list in the same tab instead.
 const SERVER_PAGE_RE = /^https:\/\/[a-z0-9.-]*narutowebgame\.com\/[a-z]{2}\/serverlist\/s\d+/i;
@@ -47,6 +56,7 @@ function hostOf(url) {
 class GameSession {
   constructor(manager, account, credentials) {
     this.manager = manager;
+    this.isGame = true;
     this.id = account.id;
     this.label = account.label;
     this.account = account;
@@ -298,9 +308,93 @@ class GameSession {
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    // write the login cookie to disk before the views are gone
+    autoLogin.flush(this.ses);
     if (this.host) this.host.removeTab(this);
     if (!this.contents.isDestroyed()) this.contents.destroy();
     this.manager.sessionClosed(this);
+  }
+}
+
+let popupSeq = 0;
+
+/**
+ * A page the game opened itself: top-up, website, support. It shares the
+ * account partition, so the login carries over, and sits as a tab next to the
+ * games. It is a browsing view (see security.setBrowsing): tracker blocking
+ * stays on, the strict allowlist does not apply, because a checkout runs over
+ * payment providers that cannot be listed in advance.
+ */
+class PopupTab {
+  constructor(manager, partition, url) {
+    this.manager = manager;
+    this.isGame = false;
+    this.id = `page_${++popupSeq}`;
+    this.url = url;
+    this.label = manager.t('tabs.page');
+    this.login = 'none';
+    this.muted = false;
+    this.destroyed = false;
+    this.host = null;
+
+    this.view = new BrowserView({ webPreferences: manager.browseWebPreferences(partition) });
+    this.view.setBackgroundColor('#ffffff');
+    this.contents = this.view.webContents;
+    this.contents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp');
+    security.setBrowsing(this.contents);
+    security.guardNavigation(this.contents, { browse: true });
+    manager.handlePopups(this.contents, partition, this);
+
+    this.contents.on('will-prevent-unload', (event) => event.preventDefault());
+    this.contents.on('page-title-updated', (event, title) => {
+      event.preventDefault();
+      this._setLabel(title);
+    });
+    this.contents.on('did-fail-load', (_e, code, desc, failed, isMainFrame) => {
+      if (isMainFrame && code !== -3) log.warn(`page tab: load failed (${code} ${desc}): ${failed}`);
+    });
+    this._setLabel(hostOf(url));
+  }
+
+  load() {
+    return this.contents.loadURL(this.url).catch((err) => {
+      if (!/ERR_ABORTED/.test(err.message)) log.warn(`page tab: ${err.message}`);
+    });
+  }
+
+  _setLabel(text) {
+    const clean = String(text || '').trim().replace(/\s+/g, ' ');
+    if (!clean) return;
+    this.label = clean.length > TAB_LABEL_MAX ? `${clean.slice(0, TAB_LABEL_MAX - 1)}…` : clean;
+    if (this.host) {
+      this.host.pushState();
+      this.host.layout();
+    }
+  }
+
+  title() {
+    return this.label;
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    this.applyAudio();
+    if (this.host) this.host.pushState();
+  }
+
+  applyAudio() {
+    if (this.contents.isDestroyed()) return;
+    const background =
+      this.manager.settings.get('muteInactiveTabs') && this.host && this.host.tabbed && this.host.active !== this;
+    this.contents.setAudioMuted(this.muted || Boolean(background));
+  }
+
+  destroy() {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    if (this.host) this.host.removeTab(this);
+    if (!this.contents.isDestroyed()) this.contents.destroy();
+    this.manager.changed();
   }
 }
 
@@ -312,6 +406,7 @@ class SessionManager {
   constructor(deps) {
     Object.assign(this, deps);
     this.sessions = new Map();
+    this.partitions = new Set(); // partitions used in this run, for the cookie flush
     this.hosts = new Set();
     this.lastHost = null;
     this.onChange = () => {};
@@ -343,6 +438,12 @@ class SessionManager {
 
 
 
+  /** Web pages without the game: no plugins, no game preload, same partition. */
+  browseWebPreferences(partition) {
+    const { preload, additionalArguments, plugins, ...rest } = this.gameWebPreferences(partition);
+    return { ...rest, plugins: false };
+  }
+
   changed() {
     for (const host of this.hosts) host.pushState();
     this.onChange();
@@ -357,6 +458,7 @@ class SessionManager {
     }
 
     const partition = partitionFor(account.id);
+    this.partitions.add(partition);
     const ses = session.fromPartition(partition);
     security.hardenGameSession(ses, () => ({
       blockTrackers: this.settings.get('blockTrackers'),
@@ -392,7 +494,12 @@ class SessionManager {
     const host = new GameHost({
       tabbed,
       isDev: this.isDev,
-      size: { width: this.settings.get('gameWidth'), height: this.settings.get('gameHeight') },
+      bounds: {
+        width: this.settings.get('gameWidth'),
+        height: this.settings.get('gameHeight'),
+        x: this.settings.get('gameX'),
+        y: this.settings.get('gameY')
+      },
       t: this.t,
       onClosed: (h) => {
         this.hosts.delete(h);
@@ -407,11 +514,11 @@ class SessionManager {
           // ignore
         }
       },
-      onResize: (width, height) => {
+      onBounds: (b) => {
         try {
-          this.settings.update({ gameWidth: width, gameHeight: height });
+          this.settings.update({ gameWidth: b.width, gameHeight: b.height, gameX: b.x, gameY: b.y });
         } catch (_) {
-          // size outside the allowed range
+          // outside the allowed range
         }
       }
     });
@@ -425,42 +532,68 @@ class SessionManager {
 
   /**
    * window.open from game pages. Server pages replace the current page of the
-   * tab; sign-in popups (Google, Facebook) and other game pages (shop, support)
-   * get their own window; everything else opens in the system browser.
+   * tab; other pages of the game (top-up, website, support) become tabs next to
+   * the games; sign-in popups (Google, Facebook) need window.opener and stay
+   * windows; everything else opens in the system browser.
+   *
+   * @param {Electron.WebContents} contents
+   * @param {string} partition
+   * @param {?(GameSession|PopupTab)} owner tab the page belongs to
    */
   handlePopups(contents, partition, owner) {
     contents.on('new-window', (event, url, _frameName, disposition, options) => {
       event.preventDefault();
-      if (owner && SERVER_PAGE_RE.test(url)) {
+      if (owner && owner.isGame && SERVER_PAGE_RE.test(url)) {
         // keep the launcher parameters, without them the site shows its "download the launcher" bar
         const target = url.includes('launcher=') ? url : `${url}${url.includes('?') ? '&' : '?'}${LAUNCHER_PARAMS}`;
         log.info(`"${owner.id}": opening server in the tab: ${target.slice(0, 160)}`);
         contents.loadURL(target).catch(() => {});
         return;
       }
-      const inApp = url === 'about:blank' || security.isGameUrl(url) || security.isAuthPopupUrl(url);
+      const auth = security.isAuthPopupUrl(url);
+      const inApp = url === 'about:blank' || security.isGameUrl(url) || auth;
       if (!inApp || disposition === 'save-to-disk') {
         security.openExternalSafe(url);
         return;
       }
+
+      const host = owner && owner.host;
+      // A tab is loaded by the launcher itself, so the page loses window.opener.
+      // Sign-in popups and about:blank windows need it and keep their window.
+      const asTab = this.settings.get('popupsInTabs') && host && host.canTakeTabs() && !auth && url !== 'about:blank';
+      if (asTab) {
+        const tab = new PopupTab(this, partition, url);
+        host.addTab(tab);
+        tab.load();
+        this.changed();
+        log.info(`page in a tab: ${url.slice(0, 120)}`);
+        return;
+      }
+
       const { preload, additionalArguments, ...popupPreferences } = this.gameWebPreferences(partition);
       const popup = new BrowserWindow({
-        width: options.width || 900,
-        height: options.height || 700,
+        width: auth ? options.width || 600 : Math.max(options.width || 0, POPUP_MIN_WIDTH),
+        height: auth ? options.height || 700 : Math.max(options.height || 0, POPUP_MIN_HEIGHT),
+        parent: host && !host.win.isDestroyed() ? host.win : undefined,
         webContents: options.webContents,
         autoHideMenuBar: true,
         show: false,
         webPreferences: popupPreferences
       });
       popup.setMenu(null);
-      security.guardNavigation(popup.webContents);
+      if (!auth) {
+        security.setBrowsing(popup.webContents);
+        security.guardNavigation(popup.webContents, { browse: true });
+      } else {
+        security.guardNavigation(popup.webContents);
+      }
       popup.webContents.on('will-prevent-unload', (e) => e.preventDefault());
-      this.handlePopups(popup.webContents, partition);
+      this.handlePopups(popup.webContents, partition, null);
       popup.once('ready-to-show', () => popup.show());
       // loading it ourselves keeps window.opener, which sign-in flows rely on
       if (!options.webContents) popup.loadURL(url);
       event.newGuest = popup;
-      log.info(`popup: ${url.slice(0, 120)}`);
+      log.info(`popup window: ${url.slice(0, 120)}`);
     });
   }
 
@@ -528,6 +661,13 @@ class SessionManager {
     await ses.clearStorageData();
     await ses.clearCache();
     log.info(`session data deleted: ${accountId}`);
+  }
+
+  /** Writes the cookies of all sessions of this run to disk (keeps the login). */
+  async flushCookies() {
+    for (const partition of this.partitions) {
+      await autoLogin.flush(session.fromPartition(partition));
+    }
   }
 
   /** Re-sends translated labels to all tab strips after a language change. */

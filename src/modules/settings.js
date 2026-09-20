@@ -11,6 +11,9 @@ const UI_SCALES = ['0.8', '0.9', '1', '1.1', '1.25', '1.5'];
 const LANGUAGES = ['auto', 'en', 'de'];
 
 const bool = (v) => typeof v === 'boolean';
+// window position: null means "not stored yet"
+const coord = (v) => v === null || (Number.isInteger(v) && v >= -32000 && v <= 32000);
+const size = (min, max) => (v) => Number.isInteger(v) && v >= min && v <= max;
 
 const SCHEMA = {
   language: { default: 'auto', valid: (v) => LANGUAGES.includes(v) },
@@ -28,18 +31,30 @@ const SCHEMA = {
   blockTrackers: { default: true, valid: bool },
   strictNetwork: { default: true, valid: bool },
   autoLogin: { default: true, valid: bool },
+  popupsInTabs: { default: true, valid: bool },
+  checkUpdates: { default: true, valid: bool },
   debugLog: { default: false, valid: bool },
-  gameWidth: { default: 1280, valid: (v) => Number.isInteger(v) && v >= 800 && v <= 7680 },
-  gameHeight: { default: 800, valid: (v) => Number.isInteger(v) && v >= 550 && v <= 4320 },
+  gameWidth: { default: 1280, valid: size(800, 7680) },
+  gameHeight: { default: 800, valid: size(550, 4320) },
+  gameX: { default: null, valid: coord },
+  gameY: { default: null, valid: coord },
   gameMaximized: { default: false, valid: bool },
+  winWidth: { default: 1100, valid: size(760, 7680) },
+  winHeight: { default: 780, valid: size(560, 4320) },
+  winX: { default: null, valid: coord },
+  winY: { default: null, valid: coord },
   minimizeOnStart: { default: false, valid: bool }
 };
+
+// Keys that only hold window geometry; they survive a settings reset.
+const GEOMETRY_KEYS = ['gameWidth', 'gameHeight', 'gameX', 'gameY', 'gameMaximized', 'winWidth', 'winHeight', 'winX', 'winY'];
 
 // Keys renamed since earlier versions: old name -> new name
 const RENAMED = { autoFill: 'autoLogin' };
 
-// Chromium switches are only read at startup.
-const RESTART_KEYS = ['preset', 'debugLog'];
+// Chromium switches are only read at startup. Everything else takes effect
+// right away or when the next game is started.
+const RESTART_KEYS = ['preset'];
 
 class Settings {
   constructor(userDataDir) {
@@ -75,9 +90,9 @@ class Settings {
     return { ...this.values };
   }
 
-  /** Restores the defaults, except language and window size. Returns the changed keys. */
+  /** Restores the defaults, except language and window geometry. Returns the changed keys. */
   reset() {
-    const keep = ['language', 'gameWidth', 'gameHeight', 'gameMaximized'];
+    const keep = ['language', ...GEOMETRY_KEYS];
     const patch = {};
     for (const [key, def] of Object.entries(SCHEMA)) if (!keep.includes(key)) patch[key] = def.default;
     return this.update(patch);
@@ -103,4 +118,4 @@ class Settings {
   }
 }
 
-module.exports = { Settings, RESTART_KEYS, UI_SCALES };
+module.exports = { Settings, RESTART_KEYS, GEOMETRY_KEYS, UI_SCALES };

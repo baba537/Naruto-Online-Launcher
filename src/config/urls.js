@@ -34,6 +34,9 @@ const RESOURCE_DOMAINS = [
   ...GAME_DOMAINS,
   'qq.com', // res.huoying.qq.com serves the game SWFs
   'gtimg.cn',
+  'oasispay.org', // payment pages (pay/api/res.oasispay.org)
+  'oasimage-bucket.s3.amazonaws.com', // images of the website
+  'bootcss.com', // css/js library used by the website
   'cloudflare.com', // challenges.cloudflare.com, bot check in front of the server list
   'facebook.net', // Facebook SDK for Facebook sign-in
   'facebook.com',

@@ -6,12 +6,13 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 const invoke = (channel) => (...args) => ipcRenderer.invoke(channel, ...args);
-const EVENT_TYPES = ['metrics', 'memoryWarning', 'running', 'loginFailed', 'crashRecovered', 'screenshot'];
+const EVENT_TYPES = ['metrics', 'memoryWarning', 'running', 'loginFailed', 'crashRecovered', 'screenshot', 'updateAvailable'];
 
 contextBridge.exposeInMainWorld('launcher', {
   getState: invoke('app:getState'),
   restart: invoke('app:restart'),
   openLogs: invoke('app:openLogs'),
+  openReleases: invoke('app:openReleases'),
   updateSettings: invoke('settings:update'),
   resetSettings: invoke('settings:reset'),
 

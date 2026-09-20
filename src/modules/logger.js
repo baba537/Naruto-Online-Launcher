@@ -28,6 +28,11 @@ function init(userDataDir, { debug = false } = {}) {
   }
 }
 
+/** Switches the debug level at runtime (settings change). */
+function setDebug(debug) {
+  minLevel = debug ? LEVELS.debug : LEVELS.info;
+}
+
 function isDebug() {
   return minLevel <= LEVELS.debug;
 }
@@ -54,4 +59,4 @@ function create(scope) {
   };
 }
 
-module.exports = { init, create, isDebug, getLogFile: () => logFile };
+module.exports = { init, create, setDebug, isDebug, getLogFile: () => logFile };

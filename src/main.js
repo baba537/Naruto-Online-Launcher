@@ -18,6 +18,8 @@ const flashManager = require('./modules/flashManager');
 const { CredentialVault, MIN_MASTER_PASSWORD_LENGTH } = require('./modules/credentialVault');
 const { SessionManager } = require('./modules/sessionManager');
 const { AssetCache } = require('./modules/assetCache');
+const updateCheck = require('./modules/updateCheck');
+const windowBounds = require('./modules/windowBounds');
 const { UserError } = require('./modules/errors');
 const security = require('./modules/security');
 const { REGIONS, isValidRegion, isValidServer } = require('./config/urls');
@@ -146,9 +148,13 @@ function needsNoSandboxOnLinux() {
 const RENDERER_INDEX = path.join(__dirname, 'renderer', 'index.html');
 
 function createMainWindow() {
+  const width = settings.get('winWidth');
+  const height = settings.get('winHeight');
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 780,
+    width,
+    height,
+    ...windowBounds.position({ x: settings.get('winX'), y: settings.get('winY') }, width, height),
+    useContentSize: true,
     minWidth: 760,
     minHeight: 560,
     title: 'Naruto Online Launcher',
@@ -170,6 +176,13 @@ function createMainWindow() {
   });
   mainWindow.loadFile(RENDERER_INDEX);
   mainWindow.once('ready-to-show', () => mainWindow.show());
+  windowBounds.track(mainWindow, (b) => {
+    try {
+      settings.update({ winWidth: b.width, winHeight: b.height, winX: b.x, winY: b.y });
+    } catch (_) {
+      // outside the allowed range
+    }
+  });
 
   const contents = mainWindow.webContents;
   contents.on('did-finish-load', applyUiScale);
@@ -308,6 +321,11 @@ function registerIpcHandlers() {
     app.exit(0);
   });
 
+  handle('app:openReleases', async () => {
+    security.openExternalSafe(updateCheck.RELEASES_URL);
+    return { ok: true };
+  });
+
   handle('app:openLogs', async () => {
     const file = logger.getLogFile();
     if (file) shell.showItemInFolder(file);
@@ -319,10 +337,13 @@ function registerIpcHandlers() {
     if (changed.includes('uiScale')) applyUiScale();
     if (changed.includes('language')) sessionManager.refreshLabels();
     if (changed.includes('zoomRender') || changed.includes('muteInactiveTabs')) sessionManager.refreshViews();
+    if (changed.includes('debugLog')) logger.setDebug(IS_DEV || settings.get('debugLog'));
+    const restartKeys = changed.filter((k) => RESTART_KEYS.includes(k));
     return {
       settings: settings.getAll(),
       language: language(),
-      restartRequired: changed.some((k) => RESTART_KEYS.includes(k))
+      restartRequired: restartKeys.length > 0,
+      restartKeys
     };
   };
 
@@ -477,6 +498,7 @@ app
     registerIpcHandlers();
     createMainWindow();
     startMetricsLoop();
+    runUpdateCheck();
   })
   .catch((err) => {
     log.error('startup failed:', err);
@@ -484,8 +506,23 @@ app
     app.exit(1);
   });
 
+/** Asks GitHub once per start whether a newer release exists. */
+function runUpdateCheck() {
+  if (IS_DEV || !settings.get('checkUpdates')) return;
+  setTimeout(() => {
+    updateCheck
+      .check(app.getVersion())
+      .then((found) => found && sendToUI('updateAvailable', found))
+      .catch(() => {});
+  }, 4000);
+}
+
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => assetCache.logSummary('game files'));
+app.on('before-quit', () => {
+  assetCache.logSummary('game files');
+  // Chromium writes cookies lazily; without this a login can be lost on exit
+  sessionManager.flushCookies();
+});
 
 process.on('uncaughtException', (err) => log.error('uncaught exception:', err));
 process.on('unhandledRejection', (reason) => log.error('unhandled rejection:', reason));

@@ -10,6 +10,10 @@
 // The site sets the cookie without an expiry date, so Chromium drops it on
 // exit although the token inside stays valid. keepLoginCookie() stores it with
 // the token's own expiry instead, the same effect as "remember me".
+//
+// Chromium writes its cookie file lazily. Without flushStore() a login can be
+// lost when the launcher is closed or the machine restarts shortly afterwards,
+// so the store is flushed after the cookie was kept and again on shutdown.
 
 const log = require('./logger').create('login');
 const urls = require('../config/urls');
@@ -65,9 +69,15 @@ function keepLoginCookie(ses) {
         sameSite: cookie.sameSite,
         expirationDate: Math.floor(expiry / 1000)
       })
+      .then(() => flush(ses))
       .then(() => log.info(`login kept until ${new Date(expiry).toISOString()}`))
       .catch((err) => log.warn(`could not keep login cookie: ${err.message}`));
   });
+}
+
+/** Writes pending cookies to disk. */
+function flush(ses) {
+  return Promise.resolve(ses.cookies.flushStore()).catch((err) => log.warn(`cookie store not written: ${err.message}`));
 }
 
 /**
@@ -143,4 +153,4 @@ function buildLoginScript(username, password, timeoutMs = 15000) {
 })(${JSON.stringify(username)}, ${JSON.stringify(password)}, ${Number(timeoutMs)});`;
 }
 
-module.exports = { hasValidLogin, keepLoginCookie, buildLoginScript, jwtExpiry };
+module.exports = { hasValidLogin, keepLoginCookie, flush, buildLoginScript, jwtExpiry };

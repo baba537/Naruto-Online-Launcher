@@ -13,6 +13,8 @@ The interface is available in English and German.
 - **Accounts in tabs.** Every account has its own session (cookies, cache, login). Start several at once in one window (or all of them with one click), or turn tabs off and get one window per account.
 - **Automatic sign-in.** Username and password are stored encrypted. The launcher fills in the login form and clicks sign in once; a wrong password is never retried in a loop. A valid login is kept across restarts.
 - **Zoom per account.** `Ctrl` + `+` / `-` / `0` in the game window, remembered for each account. *Sharp* (default) redraws the game at the larger size; *smooth* scales the finished picture with filtering. See [Performance](#performance).
+- **Pages in tabs.** Top-up, the official website and support open as another tab in the game window instead of a small extra window, so the game stays where it is.
+- **Windows stay where you put them.** Position and size of the launcher and of the game window are remembered.
 - **Sound.** Mute a tab with `Ctrl+M` (remembered per account), or let only the active tab play sound.
 - **Flash quality.** Set from low to best on the Flash embed before the game starts. See [Performance](#performance).
 - **Faster restarts.** Versioned game files are kept in the cache instead of being downloaded again.
@@ -43,6 +45,17 @@ chmod +x Naruto-Online-Launcher-*.AppImage
 ```
 
 Some distributions need `libfuse2` for AppImages. The `.deb` package does not.
+
+### Updating
+
+Run the new installer (or `.deb`) over the existing one, or replace the AppImage. Accounts, saved logins, settings and the cache are kept: they live next to the app, not inside it.
+
+| System | Data folder |
+|---|---|
+| Windows | `%APPDATA%\Naruto Online Launcher` |
+| Linux | `~/.config/Naruto Online Launcher` |
+
+At startup the launcher asks GitHub once whether a newer release exists and shows a note if so. It never downloads or installs anything by itself; the check can be turned off in the settings.
 
 ## Performance
 
@@ -77,6 +90,7 @@ Memory: the Flash plugin takes what it needs, there is no limit to raise. The la
 - The site shows a reduced launcher layout when it is asked for it with the URL parameters `leftbar_collapse=Yes&launcher=…` and a matching user agent. The launcher sends the same values the site already knows from existing launchers; nothing else about the requests is changed.
 - Sign-in fills the site's own login form and clicks its button. There is no private API use and no modification of game traffic.
 - Requests to analytics and tracking hosts are cancelled. Everything else goes straight to the game's servers; the launcher has no server of its own and sends nothing anywhere else.
+- The only request that does not go to the game: the version check at `api.github.com` (switchable). It sends nothing but the request itself.
 - Stored on your computer: settings, the encrypted vault, logs, and the browser data (cookies, cache) of each account.
 - The Flash plugin files are Adobe's (version 34.0.0.376 for Windows, 34.0.0.137 for Linux). Their SHA-256 values are in [resources/flash](resources/flash) and are checked at startup.
 
@@ -106,6 +120,8 @@ Memory: the Flash plugin takes what it needs, there is no limit to raise. The la
 **Release builds** refuse remote debugging switches.
 
 The strict network mode (on by default) only lets the game views talk to known game hosts.
+
+**Pages the game opens itself** (top-up, website, support) run as browsing views: the tracker blocker stays on and they are sandboxed like the game views, but the strict allowlist is not applied and they may follow https links. A checkout runs over payment providers that cannot be listed in advance. Sign-in with a bank or a payment provider happens on their own pages; the launcher never sees or stores those details, and downloads stay blocked.
 
 ## Building from source
 
