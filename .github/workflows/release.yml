@@ -99,8 +99,16 @@ jobs:
             fi
             gh release upload "$TAG" release/* --clobber
           else
+            # notes: the changes of this version from CHANGELOG.md, then the download table
+            VERSION="${TAG#v}"
+            awk -v v="$VERSION" 'index($0, "## " v " ") == 1 { found = 1; next } /^## / { found = 0 } found' CHANGELOG.md > changes.md
+            if [ ! -s changes.md ]; then
+              echo "CHANGELOG.md has no section for $VERSION"
+              exit 1
+            fi
+            { echo "### Changes"; cat changes.md; echo; echo "### Download"; echo; cat .github/release-notes.md; } > notes.md
             gh release create "$TAG" release/* \
               --target "$GITHUB_SHA" \
               --title "Naruto Online Launcher $TAG" \
-              --notes-file .github/release-notes.md
+              --notes-file notes.md
           fi

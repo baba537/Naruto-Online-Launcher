@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 (2026-09-23)
+
+- Linux: pages opened from the game (official website, top-up) report the same platform as the user agent, so the website no longer switches to its mobile layout
+- Windows: graphics cards that were removed long ago but are still listed in the registry are ignored; a desktop PC was shown as a laptop with two GPUs
+- Pages opened from the game no longer load the Flash plugin
+
 ## 1.1.0 (2026-09-20)
 
 - Pages the game opens itself (top-up, official website, support) open as a tab in the game window instead of a separate window; can be switched off

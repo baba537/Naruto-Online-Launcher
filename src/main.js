@@ -61,7 +61,8 @@ log.info(`start v${app.getVersion()} (${process.platform}/${process.arch}, Elect
 const preset = optimization.resolvePreset(settings.get('preset'));
 log.info(`preset ${preset.id} (setting: ${settings.get('preset')})`);
 
-const gpu = gpuDetector.detect(path.join(userData, 'gpu-cache.json'));
+const GPU_CACHE = path.join(userData, 'gpu-cache.json');
+const gpu = gpuDetector.detect(GPU_CACHE);
 gpuDetector.applyEnvVars(preset.gpuEnvProfile);
 const cpuOptimizer = new CpuOptimizer(preset.cpu, settings.get('cpuOptimization'));
 const flash = flashManager.locate(app);
@@ -499,6 +500,10 @@ app
     createMainWindow();
     startMetricsLoop();
     runUpdateCheck();
+    app
+      .getGPUInfo('basic')
+      .then((info) => gpuDetector.reconcile(info, GPU_CACHE))
+      .catch((err) => log.warn(`gpu info not available: ${err.message}`));
   })
   .catch((err) => {
     log.error('startup failed:', err);

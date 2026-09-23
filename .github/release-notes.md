@@ -7,4 +7,4 @@
 
 The Flash plugin is included. The builds are not code signed, so Windows SmartScreen asks once: *More info → Run anyway*.
 
-Changes: see [CHANGELOG.md](https://github.com/baba537/Naruto-Online-Launcher/blob/main/CHANGELOG.md).
+To update, run the new installer over the installed version (or replace the AppImage). Accounts, saved logins and settings are kept.

@@ -1,7 +1,7 @@
 {
   "name": "naruto-online-launcher",
   "productName": "Naruto Online Launcher",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Desktop launcher for Naruto Online with the Flash plugin, tabs for several accounts, encrypted sign-in and performance settings, for Windows and Linux",
   "main": "src/main.js",
   "homepage": "https://github.com/baba537/Naruto-Online-Launcher",
@@ -13,8 +13,7 @@
     "url": "https://github.com/baba537/Naruto-Online-Launcher/issues"
   },
   "author": {
-    "name": "baba537",
-    "email": "baba537@users.noreply.github.com"
+    "name": "Naruto Online Launcher contributors"
   },
   "license": "MIT",
   "private": true,
@@ -35,7 +34,7 @@
   "build": {
     "appId": "io.github.baba537.narutoonlinelauncher",
     "productName": "Naruto Online Launcher",
-    "copyright": "Copyright © 2026 baba537",
+    "copyright": "Copyright © 2026 Naruto Online Launcher contributors",
     "directories": {
       "output": "dist",
       "buildResources": "resources"
@@ -86,7 +85,7 @@
       "icon": "resources/icon.png",
       "category": "Game",
       "synopsis": "Launcher for Naruto Online (PPAPI Flash)",
-      "maintainer": "baba537 <baba537@users.noreply.github.com>",
+      "maintainer": "Naruto Online Launcher contributors",
       "target": [
         {
           "target": "AppImage",

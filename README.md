@@ -87,7 +87,7 @@ Memory: the Flash plugin takes what it needs, there is no limit to raise. The la
 ## What the launcher does, and what it does not
 
 - It opens the official game website (`naruto.narutowebgame.com`) in its own window. The game itself runs unchanged in Adobe's Flash plugin.
-- The site shows a reduced launcher layout when it is asked for it with the URL parameters `leftbar_collapse=Yes&launcher=…` and a matching user agent. The launcher sends the same values the site already knows from existing launchers; nothing else about the requests is changed.
+- The site shows a reduced launcher layout when it is asked for it with the URL parameters `leftbar_collapse=Yes&launcher=…` and a matching user agent. The launcher sends the same values the site already knows from existing launchers; nothing else about the requests is changed. On Linux, pages the game opens (website, top-up) also report the platform Windows, matching that user agent; otherwise the website switches to its mobile layout.
 - Sign-in fills the site's own login form and clicks its button. There is no private API use and no modification of game traffic.
 - Requests to analytics and tracking hosts are cancelled. Everything else goes straight to the game's servers; the launcher has no server of its own and sends nothing anywhere else.
 - The only request that does not go to the game: the version check at `api.github.com` (switchable). It sends nothing but the request itself.
@@ -188,3 +188,5 @@ This is an unofficial fan project and not affiliated with Oasis Games, Tencent, 
 Adobe Flash Player is a trademark of Adobe. The bundled plugin files are Adobe's and are not covered by this project's license.
 
 The launcher code is released under the [MIT license](LICENSE).
+
+Parts of this project were created with AI assistance.

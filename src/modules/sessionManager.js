@@ -438,10 +438,10 @@ class SessionManager {
 
 
 
-  /** Web pages without the game: no plugins, no game preload, same partition. */
+  /** Web pages without the game: no plugins, the page preload instead of the game one, same partition. */
   browseWebPreferences(partition) {
     const { preload, additionalArguments, plugins, ...rest } = this.gameWebPreferences(partition);
-    return { ...rest, plugins: false };
+    return { ...rest, plugins: false, preload: path.join(__dirname, '..', 'pagePreload.js') };
   }
 
   changed() {
@@ -570,7 +570,8 @@ class SessionManager {
         return;
       }
 
-      const { preload, additionalArguments, ...popupPreferences } = this.gameWebPreferences(partition);
+      const popupPreferences = this.browseWebPreferences(partition);
+      if (auth) delete popupPreferences.preload; // third-party sign-in pages stay untouched
       const popup = new BrowserWindow({
         width: auth ? options.width || 600 : Math.max(options.width || 0, POPUP_MIN_WIDTH),
         height: auth ? options.height || 700 : Math.max(options.height || 0, POPUP_MIN_HEIGHT),

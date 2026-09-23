@@ -16,6 +16,8 @@ const log = require('./logger').create('gpu');
 
 const VENDOR_IDS = { 0x10de: 'nvidia', 0x1002: 'amd', 0x8086: 'intel' };
 const VENDOR_RANK = { nvidia: 3, amd: 2, intel: 1, unknown: 0 };
+// bumped when the cached entries change shape (2: vendor and device id)
+const CACHE_VERSION = 2;
 const WIN_DISPLAY_CLASS =
   'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}';
 // Adapters that do not render: remote desktop, streaming, fallback drivers
@@ -67,7 +69,9 @@ function listGpusWindows(cacheFile) {
   if (cacheFile) {
     try {
       const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
-      if (cached.key === key && Date.now() - cached.time < 7 * 24 * 3600 * 1000) return cached.gpus;
+      if (cached.v === CACHE_VERSION && cached.key === key && Date.now() - cached.time < 7 * 24 * 3600 * 1000) {
+        return cached.gpus;
+      }
     } catch (_) {
       // no cache yet
     }
@@ -87,6 +91,8 @@ function listGpusWindows(cacheFile) {
       const vendorId = ids ? parseInt(ids[1], 16) : 0;
       const vram = Number(values['HardwareInformation.qwMemorySize']) || 0;
       gpus.push({
+        vendorId,
+        deviceId: ids ? parseInt(ids[2], 16) : 0,
         vendor: VENDOR_IDS[vendorId] || vendorFromName(values.ProviderName || desc),
         name: desc,
         driver: values.DriverVersion || '',
@@ -98,7 +104,7 @@ function listGpusWindows(cacheFile) {
   }
   if (cacheFile) {
     try {
-      fs.writeFileSync(cacheFile, JSON.stringify({ key, time: Date.now(), gpus }));
+      fs.writeFileSync(cacheFile, JSON.stringify({ v: CACHE_VERSION, key, time: Date.now(), gpus }));
     } catch (_) {
       // cache is optional
     }
@@ -155,6 +161,21 @@ function isMusl() {
   }
 }
 
+function summarize(gpus) {
+  const vendors = new Set(gpus.map((g) => g.vendor));
+  // integrated Intel GPU next to a dedicated one, typical for laptops
+  const isHybrid = vendors.has('intel') && (vendors.has('nvidia') || vendors.has('amd'));
+  const primary = gpus.slice().sort((a, b) => VENDOR_RANK[b.vendor] - VENDOR_RANK[a.vendor])[0] || null;
+  return {
+    vendor: primary ? primary.vendor : 'unknown',
+    name: primary ? primary.name : 'unknown',
+    vramMB: primary ? primary.vramMB : 0,
+    isHybrid,
+    nvidiaProprietary: process.platform === 'win32' || fs.existsSync('/proc/driver/nvidia'),
+    gpus
+  };
+}
+
 /** @param {string} [cacheFile] where Windows results may be cached */
 function detect(cacheFile) {
   if (cache) return cache;
@@ -170,20 +191,37 @@ function detect(cacheFile) {
     log.error('detection failed:', err.message);
   }
 
-  const vendors = new Set(gpus.map((g) => g.vendor));
-  // integrated Intel GPU next to a dedicated one, typical for laptops
-  const isHybrid = vendors.has('intel') && (vendors.has('nvidia') || vendors.has('amd'));
-  const primary = gpus.slice().sort((a, b) => VENDOR_RANK[b.vendor] - VENDOR_RANK[a.vendor])[0] || null;
+  cache = summarize(gpus);
+  log.info(`${cache.vendor} "${cache.name}"${cache.isHybrid ? ' [hybrid]' : ''}, ${gpus.length} adapter(s), ${Date.now() - started} ms`);
+  return cache;
+}
 
-  cache = {
-    vendor: primary ? primary.vendor : 'unknown',
-    name: primary ? primary.name : 'unknown',
-    vramMB: primary ? primary.vramMB : 0,
-    isHybrid,
-    nvidiaProprietary: process.platform === 'win32' || fs.existsSync('/proc/driver/nvidia'),
-    gpus
-  };
-  log.info(`${cache.vendor} "${cache.name}"${isHybrid ? ' [hybrid]' : ''}, ${gpus.length} adapter(s), ${Date.now() - started} ms`);
+/**
+ * The Windows registry keeps entries of graphics cards that were removed long
+ * ago, which made a desktop with one card look like a hybrid laptop. Once
+ * Chromium is up, its list of present adapters (app.getGPUInfo('basic')) is
+ * the reference: entries it does not know are dropped, in memory and in the
+ * cache file. The object returned by detect() is updated in place.
+ */
+function reconcile(gpuInfo, cacheFile) {
+  if (process.platform !== 'win32' || !cache) return cache;
+  const devices = (gpuInfo && gpuInfo.gpuDevice) || [];
+  if (devices.length === 0) return cache;
+  const present = new Set(devices.map((d) => `${d.vendorId}:${d.deviceId}`));
+  const kept = cache.gpus.filter((g) => !g.vendorId || !g.deviceId || present.has(`${g.vendorId}:${g.deviceId}`));
+  if (kept.length === cache.gpus.length || kept.length === 0) return cache;
+  const dropped = cache.gpus.filter((g) => !kept.includes(g)).map((g) => g.name);
+  Object.assign(cache, summarize(kept));
+  log.info(`not present, ignored: ${dropped.join(', ')}; now ${cache.vendor} "${cache.name}"${cache.isHybrid ? ' [hybrid]' : ''}`);
+  if (cacheFile) {
+    try {
+      const stored = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      stored.gpus = kept;
+      fs.writeFileSync(cacheFile, JSON.stringify(stored));
+    } catch (_) {
+      // cache is optional
+    }
+  }
   return cache;
 }
 
@@ -240,4 +278,4 @@ function applyEnvVars(profile) {
   return applied;
 }
 
-module.exports = { detect, getEnvVars, applyEnvVars };
+module.exports = { detect, reconcile, getEnvVars, applyEnvVars };
