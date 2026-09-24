@@ -150,6 +150,14 @@ function jsFiles(dir) {
     assert.strictEqual(ask('https://www.google-analytics.com/collect', 7).cancel, true, 'trackers stay blocked');
   });
 
+  await test('network notes leave out query strings, except for IP addresses', () => {
+    const { describe } = require('../src/modules/requestMonitor');
+    assert.strictEqual(describe('https://cdn.example.com/a/b.swf?sign=secret&v=1'), 'cdn.example.com/a/b.swf');
+    assert.strictEqual(describe('http://182.254.116.117/d?dn=game.example.com&ttl=1'), '182.254.116.117/d?dn=game.example.com&ttl');
+    assert.strictEqual(describe('http://10.0.0.1/api?sign=secret&id=5'), '10.0.0.1/api?sign&id');
+    assert.ok(describe(`https://x.example.com/${'a'.repeat(300)}`).length <= 160);
+  });
+
   const { parseCpuList } = require('../src/modules/cpuOptimizer');
   await test('cpu lists', () => {
     assert.deepStrictEqual(parseCpuList('0-3,8,10-11'), [0, 1, 2, 3, 8, 10, 11]);

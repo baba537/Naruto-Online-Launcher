@@ -123,11 +123,31 @@ class GameHost {
 
   select(session) {
     if (!this.tabs.includes(session)) return;
+    const previous = this.active;
     this.active = session;
     this.layout();
     for (const tab of this.tabs) tab.applyAudio();
     this.pushState();
     if (!session.view.webContents.isDestroyed()) session.view.webContents.focus();
+    if (previous && previous !== session && session.isGame) this._repaint(session);
+  }
+
+  /**
+   * A game tab that comes back into view sometimes stays black until the next
+   * tab switch (reported on Windows and Linux, after a second account was
+   * opened). The game draws with Flash's GPU mode and apparently misses that
+   * it is visible again. A resize by one pixel and back makes Flash set up its
+   * drawing surface again, the same as a window resize.
+   */
+  _repaint(tab) {
+    clearTimeout(this.repaintTimer);
+    this.repaintTimer = setTimeout(() => {
+      if (this.active !== tab || this.win.isDestroyed() || tab.view.webContents.isDestroyed()) return;
+      const bounds = tab.view.getBounds();
+      tab.view.setBounds({ ...bounds, height: Math.max(1, bounds.height - 1) });
+      tab.view.webContents.invalidate();
+      setTimeout(() => this.active === tab && this.layout(), 60);
+    }, 120);
   }
 
   cycle(step) {

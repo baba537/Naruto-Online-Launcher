@@ -48,7 +48,12 @@ class AssetCache {
     this.attached = new WeakSet();
   }
 
-  attach(ses) {
+  /**
+   * @param {Electron.Session} ses
+   * @param {(details: object) => void} [onCompleted] also told about finished
+   *        requests; a session has only one onCompleted listener
+   */
+  attach(ses, onCompleted) {
     if (this.attached.has(ses)) return;
     this.attached.add(ses);
 
@@ -76,6 +81,7 @@ class AssetCache {
     });
 
     ses.webRequest.onCompleted({ urls: ['<all_urls>'] }, (details) => {
+      if (onCompleted) onCompleted(details);
       let url;
       try {
         url = new URL(details.url);

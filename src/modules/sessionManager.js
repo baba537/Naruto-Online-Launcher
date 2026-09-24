@@ -16,6 +16,7 @@ const security = require('./security');
 const flashManager = require('./flashManager');
 const autoLogin = require('./autoLogin');
 const { GameHost } = require('./gameHost');
+const { RequestMonitor } = require('./requestMonitor');
 const { UserError } = require('./errors');
 const { resolveFlashQuality } = require('../config/optimization');
 const { getGameUrl, hostMatches, GAME_DOMAINS, LAUNCHER_PARAMS } = require('../config/urls');
@@ -156,6 +157,15 @@ class GameSession {
     if (!this.destroyed) this._setLogin('failed');
   }
 
+  /** A sign-in that took longer than the wait (a captcha, a slow server) still counts once it arrives. */
+  async _recheckLogin() {
+    if (this.login !== 'failed' || this.destroyed) return;
+    if (await autoLogin.hasValidLogin(this.ses)) {
+      this._setLogin('ok');
+      log.info(`"${this.id}": signed in (late)`);
+    }
+  }
+
   _wire() {
     const c = this.contents;
     const m = this.manager;
@@ -170,6 +180,7 @@ class GameSession {
     c.on('did-finish-load', () => {
       this._applyZoom();
       this._tryLogin();
+      this._recheckLogin();
     });
     c.on('page-title-updated', (event) => event.preventDefault());
 
@@ -407,6 +418,7 @@ class SessionManager {
     Object.assign(this, deps);
     this.sessions = new Map();
     this.partitions = new Set(); // partitions used in this run, for the cookie flush
+    this.requestMonitor = new RequestMonitor();
     this.hosts = new Set();
     this.lastHost = null;
     this.onChange = () => {};
@@ -464,7 +476,7 @@ class SessionManager {
       blockTrackers: this.settings.get('blockTrackers'),
       strictNetwork: this.settings.get('strictNetwork')
     }));
-    this.assetCache.attach(ses);
+    this.assetCache.attach(ses, this.requestMonitor.attach(ses));
     autoLogin.keepLoginCookie(ses);
     ses.setUserAgent(this.userAgent);
     if (this.settings.get('manageMmsCfg')) {

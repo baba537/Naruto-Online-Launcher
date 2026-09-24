@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2 (2026-09-24)
+
+- A game tab that stayed black after switching back to it is redrawn
+- Network notes in the log: failed requests, HTTP errors, requests without an answer after 20 seconds, and requests to plain IP addresses. They show what a loading screen that stops at a fixed percentage is waiting for
+- A sign-in that takes longer than 25 seconds (captcha, slow server) is shown as signed in once it arrives
+
 ## 1.1.1 (2026-09-23)
 
 - Linux: pages opened from the game (official website, top-up) report the same platform as the user agent, so the website no longer switches to its mobile layout
